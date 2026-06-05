@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: agripride-marketlink
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: false
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agripride-marketlink-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SUBMITTER_USERNAME
+        value: submitter
+      - key: SUBMITTER_PASSWORD
+        sync: false
+      - key: SUBMITTER_OFFICER_ID
+        value: OFFICER-A
+      - key: REVIEWER_USERNAME
+        value: reviewer
+      - key: REVIEWER_PASSWORD
+        sync: false
+      - key: REVIEWER_OFFICER_ID
+        value: OFFICER-B
+      - key: FRESHNESS_THRESHOLD_HOURS
+        value: "24"
+      - key: SMS_PROVIDER
+        value: mock
+      - key: ENABLE_LIVE_SMS
+        value: "false"
+      - key: AT_ENVIRONMENT
+        value: sandbox
+databases:
+  - name: agripride-marketlink-db
+    plan: free
