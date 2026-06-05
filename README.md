@@ -43,6 +43,8 @@ Default officer accounts from `.env.example`:
 
 The seed creates approved demo ranges for maize, sunflower, and groundnuts. Groundnuts is intentionally stale to demonstrate the stale-price warning.
 
+For Render first deploys, you can also set `SEED_DEMO_ON_START=true` temporarily. On startup the app will insert the three approved demo crop ranges only when there are no approved price records yet. It does not seed farmer personal data and it does not delete or replace existing approved records.
+
 ## SMS And USSD Smoke Tests
 
 PowerShell:
@@ -79,6 +81,7 @@ Required environment variables:
 - `REVIEWER_PASSWORD`
 - `REVIEWER_OFFICER_ID`
 - `FRESHNESS_THRESHOLD_HOURS=24`
+- `SEED_DEMO_ON_START=false`
 - `SMS_PROVIDER=mock`
 - `ENABLE_LIVE_SMS=false`
 
@@ -88,6 +91,15 @@ Optional Africa's Talking variables:
 - `AT_API_KEY`
 - `AT_SENDER_ID`
 - `AT_ENVIRONMENT=sandbox`
+
+### One-Time Render Demo Seed
+
+1. Before the first Render deploy, set `SEED_DEMO_ON_START=true`.
+2. Deploy and open `/market` to confirm maize, sunflower, and groundnuts sample ranges are visible.
+3. Immediately set `SEED_DEMO_ON_START=false`.
+4. Redeploy or restart the service so future startups cannot seed again.
+
+The startup seed is idempotent: if any approved price record already exists, it skips without adding duplicates.
 
 ## Provider Integration Position
 

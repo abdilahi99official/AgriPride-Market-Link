@@ -237,6 +237,7 @@ def reset_database() -> None:
 @app.on_event("startup")
 def startup() -> None:
     init_db()
+    seed_demo_on_start_if_enabled()
 
 
 def render_page(title: str, body: str, *, lite: bool = False) -> HTMLResponse:
@@ -983,15 +984,18 @@ self.addEventListener('fetch', event => {
     return PlainTextResponse(js.strip(), media_type="application/javascript")
 
 
-def seed_demo_data() -> None:
-    reset_database()
+def demo_price_rows() -> list[tuple[str, int, int, str, str]]:
     now = iso_now()
     stale = (utcnow() - timedelta(hours=freshness_hours() + 4)).isoformat()
-    rows = [
+    return [
         ("maize", 650, 780, "Kibaigwa market officer", now),
         ("sunflower", 1100, 1280, "Kibaigwa market officer", now),
         ("groundnuts", 1800, 2100, "Kibaigwa market officer", stale),
     ]
+
+
+def insert_demo_price_rows() -> None:
+    rows = demo_price_rows()
     with connect() as conn:
         for crop, min_price, max_price, source, reviewed_at in rows:
             conn.execute(
@@ -1002,6 +1006,27 @@ def seed_demo_data() -> None:
                 """,
                 (crop, min_price, max_price, source, reviewed_at, reviewed_at, reviewed_at),
             )
+
+
+def approved_record_count() -> int:
+    with connect() as conn:
+        row = conn.execute("SELECT COUNT(*) AS n FROM price_records WHERE status='approved'").fetchone()
+    return int(row["n"])
+
+
+def seed_demo_on_start_if_enabled() -> bool:
+    if os.getenv("SEED_DEMO_ON_START", "false").lower() != "true":
+        return False
+    if approved_record_count() > 0:
+        return False
+    insert_demo_price_rows()
+    log_audit("seed", "seed_demo_on_start", "PriceRecord", None, "maize,sunflower,groundnuts")
+    return True
+
+
+def seed_demo_data() -> None:
+    reset_database()
+    insert_demo_price_rows()
     log_audit("seed", "seed_demo_data", "PriceRecord", None, "maize,sunflower,groundnuts")
     print("Seeded demo data for maize, sunflower, and groundnuts.")
 

@@ -29,6 +29,8 @@ services:
         value: OFFICER-B
       - key: FRESHNESS_THRESHOLD_HOURS
         value: "24"
+      - key: SEED_DEMO_ON_START
+        value: "false"
       - key: SMS_PROVIDER
         value: mock
       - key: ENABLE_LIVE_SMS
