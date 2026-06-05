@@ -7,7 +7,7 @@ os.environ.setdefault("FRESHNESS_THRESHOLD_HOURS", "24")
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import connect, iso_now, reset_database, seed_demo_data, utcnow, app
+from app.main import connect, iso_now, reset_database, seed_demo_data, seed_demo_on_start_if_enabled, utcnow, app
 
 
 client = TestClient(app)
@@ -162,6 +162,30 @@ def test_multi_crop_support() -> None:
         response = client.get(f"/api/v1/prices/{crop}")
         assert response.status_code == 200
         assert response.json()["crop"] == crop
+
+
+def test_startup_demo_seed_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SEED_DEMO_ON_START", raising=False)
+    assert seed_demo_on_start_if_enabled() is False
+    assert count_rows("price_records") == 0
+
+
+def test_startup_demo_seed_enabled_is_idempotent_and_no_farmer_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEED_DEMO_ON_START", "true")
+    assert seed_demo_on_start_if_enabled() is True
+    assert seed_demo_on_start_if_enabled() is False
+    with connect() as conn:
+        crops = conn.execute("SELECT crop FROM price_records WHERE status='approved' ORDER BY crop").fetchall()
+    assert [row["crop"] for row in crops] == ["groundnuts", "maize", "sunflower"]
+    assert count_rows("price_records") == 3
+    assert count_rows("farmer_queries") == 0
+
+
+def test_startup_demo_seed_skips_when_approved_records_exist(monkeypatch: pytest.MonkeyPatch) -> None:
+    seed_approved("maize")
+    monkeypatch.setenv("SEED_DEMO_ON_START", "true")
+    assert seed_demo_on_start_if_enabled() is False
+    assert count_rows("price_records") == 1
 
 
 def test_ussd_menu_initial_response_starts_with_con() -> None:
